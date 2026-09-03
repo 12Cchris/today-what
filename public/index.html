@@ -1,0 +1,156 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>오늘 뭐 하지? v3 🤖</title>
+<link rel="stylesheet" href="styles.css?v=20260903-2">
+</head>
+<body>
+<div class="page-shell">
+  <header class="topbar">
+    <div class="brand">
+      <h1>오늘 뭐 하지?</h1>
+      <p>심심한 하루 끝, 재미있는 순간 시작!</p>
+    </div>
+    <div class="top-actions">
+      <button class="favorite-btn" id="favoriteBtn" type="button" aria-expanded="false">☆ 즐겨찾기</button>
+      <button class="icon-btn" id="menuBtn" type="button" aria-label="메뉴" aria-expanded="false">☰</button>
+    </div>
+  </header>
+
+  <section class="prompt-card glass">
+    <div class="prompt-copy">
+      <div class="mood-icon">☺</div>
+      <div>
+        <h2>오늘 기분은 어때?</h2>
+        <p>예) 비 와서 심심해, 친구랑 놀고 싶어, 돈 없는 날 추천해줘</p>
+      </div>
+    </div>
+    <button class="primary" id="quickDraw" type="button">추천 받기 ✦</button>
+  </section>
+
+  <div class="mode">
+    <button id="randomMode" class="on" type="button">랜덤으로 골라보기</button>
+    <button id="aiMode" type="button">AI에게 추천받기</button>
+  </div>
+
+  <section id="random">
+    <div class="cat" id="cats"></div>
+
+    <div class="main-grid">
+      <section class="panel glass">
+        <div class="panel-head">
+          <h2>오늘의 추천</h2>
+          <span>카테고리를 골라보세요</span>
+        </div>
+        <div class="result" id="result">
+          <div class="emoji">🎲</div>
+          <div class="title">오늘의 결과</div>
+          <div class="desc">버튼을 눌러 랜덤으로 하나 뽑아보세요.</div>
+        </div>
+        <div class="result-actions">
+          <button class="primary" id="draw" type="button">랜덤 뽑기</button>
+          <button class="secondary" id="save" type="button" style="display:none">♡ 저장</button>
+        </div>
+      </section>
+
+      <section class="panel glass ai" id="ai">
+        <div class="panel-head">
+          <h2>Gemini 추천</h2>
+          <span>원하는 조건을 자세히 적어보세요</span>
+        </div>
+        <div class="field">
+          <label for="request">무엇을 만들어볼까요?</label>
+          <textarea id="request" placeholder="예: 친구랑 카톡하면서 10분 동안 할 수 있는 게임"></textarea>
+        </div>
+        <div class="field">
+          <label for="condition">조건 (선택)</label>
+          <input id="condition" placeholder="예: 침대에서 할 수 있게">
+        </div>
+        <div class="field">
+          <label for="type">종류</label>
+          <select id="type">
+            <option value="recommendation">추천</option>
+            <option value="quiz">퀴즈</option>
+            <option value="question">질문</option>
+            <option value="story">이야기</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="difficulty">난이도</label>
+          <select id="difficulty"><option>쉬움</option><option>보통</option><option>어려움</option></select>
+        </div>
+        <button class="primary" id="generate" type="button">Gemini로 만들기</button>
+        <div class="loading" id="loading">Gemini가 새로운 걸 만드는 중...</div>
+      </section>
+    </div>
+  </section>
+
+  <section class="glass tip" id="tip">
+    <span class="tip-icon">♛</span>
+    <span>지금 이 순간도, 나중에 돌아보면 소중한 시간이 될 거예요.</span>
+    <button class="tip-close" type="button" aria-label="닫기">×</button>
+  </section>
+  <div class="note">Gemini는 무료 모델을 사용 중이라 응답이 늦어질 수 있습니다.</div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<aside class="side-menu" id="sideMenu" aria-hidden="true">
+  <div class="side-head"><strong>메뉴</strong><button id="menuClose" type="button" aria-label="메뉴 닫기">×</button></div>
+  <button type="button" data-menu="random">랜덤 추천</button>
+  <button type="button" data-menu="ai">Gemini 추천</button>
+  <button type="button" data-menu="favorites">즐겨찾기</button>
+</aside>
+
+<div class="favorites-pop glass" id="favoritesPop" aria-hidden="true">
+  <div class="favorites-head"><strong>즐겨찾기</strong><button id="favoritesClose" type="button">×</button></div>
+  <div id="favoritesList" class="favorites-list"></div>
+</div>
+
+<script>
+const data=[
+  ["🍕","음식","피자"],["🍜","음식","라면"],["🍔","음식","햄버거"],["🍗","음식","치킨"],["🍦","음식","아이스크림"],
+  ["🎮","게임","마인크래프트"],["🎮","게임","친구와 모바일 게임"],["🧩","게임","퍼즐 게임"],
+  ["🎬","영상","웃긴 영상"],["🐱","영상","귀여운 동물 영상"],
+  ["💬","질문","최근 가장 웃겼던 일은?"],["✈️","질문","가장 가보고 싶은 곳은?"],["😂","질문","최근 가장 웃긴 일은?"],
+  ["🎨","창작","눈 감고 고양이 그리기"],["🚀","창작","우주에서 피크닉 그리기"],
+  ["🧠","퀴즈","상식 문제 하나 풀기"],["😂","미션","가장 이상한 이모지 조합 만들기"],["🎵","미션","좋아하는 노래 한 곡 듣기"],
+  ["💤","휴식","10분 동안 편하게 쉬기"],["🍀","운빨","행운의 숫자: "+(Math.floor(Math.random()*100)+1)]
+];
+const cats=["전체","음식","게임","영상","질문","창작","퀴즈","미션","휴식","운빨"];
+const catIcons={전체:"✦",음식:"⌂",게임:"▣",영상:"▶",질문:"?",창작:"◇",퀴즈:"✓",미션:"◆",휴식:"○",운빨:"+"};
+let cat="전체",last="";
+const catsEl=document.getElementById("cats"),result=document.getElementById("result"),save=document.getElementById("save");
+const randomMode=document.getElementById("randomMode"),aiMode=document.getElementById("aiMode"),random=document.getElementById("random"),ai=document.getElementById("ai");
+const loading=document.getElementById("loading"),request=document.getElementById("request"),condition=document.getElementById("condition"),type=document.getElementById("type"),difficulty=document.getElementById("difficulty"),generate=document.getElementById("generate");
+
+cats.forEach(c=>{const b=document.createElement("button");b.textContent=c;b.dataset.icon=catIcons[c]||"•";b.type="button";b.onclick=()=>{cat=c;renderCats();draw()};catsEl.appendChild(b)});
+function renderCats(){[...catsEl.children].forEach((b,i)=>b.classList.toggle("on",cats[i]===cat))} renderCats();
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
+function showAI(x){last=x.description||x.title||"";let choices=x.choices?.length?`<div class="choices">${x.choices.map((c,i)=>`<div class="choice"><b>${String.fromCharCode(65+i)}.</b> ${esc(c)}</div>`).join("")}</div>`:"";result.innerHTML=`<div class="emoji">🤖</div><div class="title">${esc(x.title||"AI 결과")}</div><div class="desc">${esc(x.description||"")}</div>${choices}${x.explanation?`<div class="desc"><b>해설:</b> ${esc(x.explanation)}</div>`:""}`;save.style.display="block";save.textContent="♡ 저장"}
+function draw(){let a=cat==="전체"?data:data.filter(x=>x[1]===cat);let x=a[Math.floor(Math.random()*a.length)];last=x[2];result.innerHTML=`<div class="emoji">${x[0]}</div><div class="title">${esc(x[2])}</div><div class="desc">랜덤으로 뽑힌 결과예요!</div>`;save.style.display="block";save.textContent="♡ 저장"}
+draw();save.style.display="none";
+document.getElementById("draw").onclick=draw;
+document.getElementById("quickDraw").onclick=()=>{randomMode.click();draw();document.getElementById("result").scrollIntoView({behavior:"smooth",block:"center"})};
+randomMode.onclick=()=>{randomMode.classList.add("on");aiMode.classList.remove("on");ai.classList.remove("show");document.getElementById("random").style.display="block"};
+aiMode.onclick=()=>{aiMode.classList.add("on");randomMode.classList.remove("on");document.getElementById("random").style.display="block";ai.classList.add("show");ai.scrollIntoView({behavior:"smooth",block:"center"})};
+generate.onclick=async()=>{loading.classList.add("show");save.style.display="none";try{const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.value,request:request.value,condition:condition.value,difficulty:difficulty.value,count:1})});const j=await r.json();if(!r.ok)throw Error(j.error||"생성 실패");showAI(j.items[0])}catch(e){result.innerHTML=`<div class="emoji">⚠️</div><div class="title">AI 생성 실패</div><div class="desc">${esc(e.message)}</div>`}finally{loading.classList.remove("show")}};
+save.onclick=()=>{if(!last)return;let a=JSON.parse(localStorage.getItem("pickerCustomV3Gemini")||"[]");if(!a.includes(last))a.push(last);localStorage.setItem("pickerCustomV3Gemini",JSON.stringify(a));save.textContent="✓ 저장됨";renderFavorites()};
+
+const overlay=document.getElementById("overlay"),sideMenu=document.getElementById("sideMenu"),menuBtn=document.getElementById("menuBtn"),menuClose=document.getElementById("menuClose");
+function openMenu(){sideMenu.classList.add("open");overlay.classList.add("show");sideMenu.setAttribute("aria-hidden","false");menuBtn.setAttribute("aria-expanded","true")}
+function closeMenu(){sideMenu.classList.remove("open");overlay.classList.remove("show");sideMenu.setAttribute("aria-hidden","true");menuBtn.setAttribute("aria-expanded","false")}
+menuBtn.onclick=openMenu;menuClose.onclick=closeMenu;overlay.onclick=closeMenu;
+document.querySelectorAll("[data-menu]").forEach(b=>b.onclick=()=>{const v=b.dataset.menu;closeMenu();if(v==="random")randomMode.click();if(v==="ai")aiMode.click();if(v==="favorites")openFavorites()});
+
+const favoriteBtn=document.getElementById("favoriteBtn"),favoritesPop=document.getElementById("favoritesPop"),favoritesClose=document.getElementById("favoritesClose"),favoritesList=document.getElementById("favoritesList");
+function renderFavorites(){const a=JSON.parse(localStorage.getItem("pickerCustomV3Gemini")||"[]");favoritesList.innerHTML=a.length?a.map((x,i)=>`<div class="fav-item"><span>${esc(x)}</span><button type="button" data-remove="${i}">삭제</button></div>`).join(""):"<div class=\"empty-fav\">아직 저장한 추천이 없습니다.</div>";favoritesList.querySelectorAll("[data-remove]").forEach(b=>b.onclick=()=>{const a=JSON.parse(localStorage.getItem("pickerCustomV3Gemini")||"[]");a.splice(Number(b.dataset.remove),1);localStorage.setItem("pickerCustomV3Gemini",JSON.stringify(a));renderFavorites()})}
+function openFavorites(){renderFavorites();favoritesPop.classList.add("show");favoritesPop.setAttribute("aria-hidden","false");favoriteBtn.setAttribute("aria-expanded","true")}
+function closeFavorites(){favoritesPop.classList.remove("show");favoritesPop.setAttribute("aria-hidden","true");favoriteBtn.setAttribute("aria-expanded","false")}
+favoriteBtn.onclick=()=>favoritesPop.classList.contains("show")?closeFavorites():openFavorites();favoritesClose.onclick=closeFavorites;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeMenu();closeFavorites()}});
+document.querySelector(".tip-close").onclick=e=>e.currentTarget.closest(".tip").style.display="none";
+</script>
+</body>
+</html>
