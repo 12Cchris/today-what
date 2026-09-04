@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>오늘 뭐 하지? v3 🤖</title>
-<link rel="stylesheet" href="styles.css?v=20260903-2">
+<link rel="stylesheet" href="styles.css?v=20260904-1">
 </head>
 <body>
 <div class="page-shell">
@@ -83,6 +83,23 @@
         </div>
         <button class="primary" id="generate" type="button">Gemini로 만들기</button>
         <div class="loading" id="loading">Gemini가 새로운 걸 만드는 중...</div>
+
+        <div class="quota-card" id="quotaCard" aria-live="polite">
+          <div class="quota-top">
+            <div>
+              <strong>Gemini API 사용량</strong>
+              <span id="quotaModel">모델 확인 중...</span>
+            </div>
+            <span class="quota-status" id="quotaStatus">확인 중</span>
+          </div>
+          <div class="quota-bar"><span id="quotaBarFill"></span></div>
+          <div class="quota-numbers">
+            <span id="quotaDaily">오늘 0 / 표시 한도 확인 중</span>
+            <span id="quotaRemaining">남은 요청 확인 중</span>
+          </div>
+          <div class="quota-meta" id="quotaMeta">실제 활성 한도는 Google AI Studio에서 프로젝트별로 확인할 수 있습니다.</div>
+          <a class="quota-link" href="https://aistudio.google.com/" target="_blank" rel="noopener noreferrer">Google AI Studio에서 활성 한도 확인 ↗</a>
+        </div>
       </section>
     </div>
   </section>
@@ -92,7 +109,7 @@
     <span>지금 이 순간도, 나중에 돌아보면 소중한 시간이 될 거예요.</span>
     <button class="tip-close" type="button" aria-label="닫기">×</button>
   </section>
-  <div class="note">Gemini는 무료 모델을 사용 중이라 응답이 늦어질 수 있습니다.</div>
+  <div class="note"><strong>안내:</strong> 이 서비스는 Gemini 무료 API를 사용하고 있어 요청이 몰리거나 무료 한도에 가까워지면 응답이 느려질 수 있습니다.</div>
 </div>
 
 <div class="overlay" id="overlay"></div>
@@ -110,14 +127,103 @@
 
 <script>
 const data=[
-  ["🍕","음식","피자"],["🍜","음식","라면"],["🍔","음식","햄버거"],["🍗","음식","치킨"],["🍦","음식","아이스크림"],
-  ["🎮","게임","마인크래프트"],["🎮","게임","친구와 모바일 게임"],["🧩","게임","퍼즐 게임"],
-  ["🎬","영상","웃긴 영상"],["🐱","영상","귀여운 동물 영상"],
-  ["💬","질문","최근 가장 웃겼던 일은?"],["✈️","질문","가장 가보고 싶은 곳은?"],["😂","질문","최근 가장 웃긴 일은?"],
-  ["🎨","창작","눈 감고 고양이 그리기"],["🚀","창작","우주에서 피크닉 그리기"],
-  ["🧠","퀴즈","상식 문제 하나 풀기"],["😂","미션","가장 이상한 이모지 조합 만들기"],["🎵","미션","좋아하는 노래 한 곡 듣기"],
-  ["💤","휴식","10분 동안 편하게 쉬기"],["🍀","운빨","행운의 숫자: "+(Math.floor(Math.random()*100)+1)]
-];
+  ["🍕","음식","냉장고 속 재료 3개로 간단한 간식 조합하기"],
+  ["🍜","음식","평소에 잘 안 먹던 라면 토핑 하나 골라보기"],
+  ["🥪","음식","집에 있는 재료로 미니 샌드위치 만들어보기"],
+  ["🍳","음식","계란 요리 이름 5개 떠올려보기"],
+  ["🍦","음식","오늘 먹고 싶은 디저트 메뉴 3개 적어보기"],
+  ["🍓","음식","과일 하나 골라서 예쁘게 담아보기"],
+  ["🥤","음식","평소와 다른 음료 조합 생각해보기"],
+  ["🍿","음식","영화관 간식 조합 직접 만들어보기"],
+  ["🍞","음식","토스트에 올릴 재료 조합 실험하기"],
+  ["🍫","음식","초콜릿과 어울릴 것 같은 간식 5개 찾기"],
+
+  ["🎮","게임","마인크래프트에서 10분 건축 챌린지 해보기"],
+  ["🧩","게임","친구와 끝말잇기 대신 주제 제한 끝말잇기 하기"],
+  ["🎮","게임","친구와 서로 게임 캐릭터 이름 지어주기"],
+  ["🎲","게임","가위바위보 5판의 규칙을 새로 만들어보기"],
+  ["🃏","게임","집에 있는 카드로 새로운 게임 규칙 만들어보기"],
+  ["🏆","게임","오늘 할 게임의 작은 목표 하나 정해보기"],
+  ["🕹️","게임","예전에 하던 게임에서 좋아했던 장면 떠올려보기"],
+  ["🔢","게임","숫자 1~30 중 하나를 골라 규칙 만들어보기"],
+  ["🎯","게임","친구와 1분 안에 단어 10개 말하기 대결하기"],
+  ["🗺️","게임","게임 속 가상의 보물지도 그려보기"],
+
+  ["🎬","영상","5분 이하의 짧은 영상 하나 골라보기"],
+  ["🐱","영상","귀여운 동물 영상 하나 보고 기억에 남는 장면 적기"],
+  ["🎞️","영상","예전에 좋아했던 영상 하나 다시 찾아보기"],
+  ["🤣","영상","친구에게 웃긴 영상을 하나 추천받기"],
+  ["📺","영상","평소 보지 않던 장르의 짧은 영상 보기"],
+  ["🎧","영상","영상 대신 음악 플레이리스트 한 곡 감상하기"],
+  ["🌌","영상","우주·자연 같은 풍경 영상 감상하기"],
+  ["🐶","영상","동물의 행동을 따라 말로 중계해보기"],
+  ["🍿","영상","10분 안에 볼 짧은 콘텐츠 하나 골라보기"],
+  ["🎥","영상","직접 찍는다면 어떤 영상이 재미있을지 아이디어 내기"],
+
+  ["💬","질문","최근 가장 웃겼던 일은?"],
+  ["✈️","질문","가장 가보고 싶은 곳은?"],
+  ["🎁","질문","지금 갖고 싶은 작은 물건 하나는?"],
+  ["🌟","질문","최근에 스스로 잘했다고 느낀 일은?"],
+  ["🧠","질문","하루가 2시간 더 생긴다면 무엇을 하고 싶어?"],
+  ["🎨","질문","내 방에서 하나만 바꿀 수 있다면 무엇을 바꿀까?"],
+  ["📱","질문","친구와 같이 해보고 싶은 활동은?"],
+  ["🍀","질문","요즘 은근히 좋아하는 것은?"],
+  ["🌧️","질문","비 오는 날에 어울리는 놀이는 뭐라고 생각해?"],
+  ["🚀","질문","내가 게임을 만든다면 어떤 게임을 만들까?"],
+
+  ["🎨","창작","눈 감고 30초 동안 고양이 그리기"],
+  ["🚀","창작","우주에서 피크닉하는 장면 그리기"],
+  ["🏠","창작","내 방을 게임 맵처럼 설계해보기"],
+  ["🐉","창작","새로운 판타지 동물 이름과 특징 만들기"],
+  ["🎵","창작","가상의 노래 제목 5개 만들어보기"],
+  ["📖","창작","첫 문장만 보고 짧은 이야기 이어 쓰기"],
+  ["🧁","창작","세상에 없는 디저트 하나 디자인하기"],
+  ["👾","창작","새로운 게임 몬스터 하나 만들기"],
+  ["🌈","창작","내일의 날씨가 색깔이라면 무슨 색일지 그려보기"],
+  ["🪐","창작","가상의 행성 이름과 규칙 3개 만들기"],
+
+  ["🧠","퀴즈","상식 문제 하나 풀어보기"],
+  ["🔍","퀴즈","집 안에서 네모난 물건 10개 찾아보기"],
+  ["🔢","퀴즈","1부터 30까지 3의 배수만 빠르게 말해보기"],
+  ["🗺️","퀴즈","세계지도에서 아는 나라 10개 떠올리기"],
+  ["📚","퀴즈","최근 배운 내용 중 기억나는 것 3개 적어보기"],
+  ["👀","퀴즈","주변에서 파란색 물건 5개 찾아보기"],
+  ["🎵","퀴즈","노래 제목을 듣고 가수 맞혀보기"],
+  ["🐾","퀴즈","동물 특징만 듣고 어떤 동물인지 맞히기"],
+  ["🧩","퀴즈","간단한 수수께끼 하나 만들어 친구에게 내기"],
+  ["📝","퀴즈","오늘 있었던 일을 퀴즈 3문제로 바꿔보기"],
+
+  ["😂","미션","가장 이상한 이모지 조합 만들기"],
+  ["🎵","미션","좋아하는 노래 한 곡을 끝까지 집중해서 듣기"],
+  ["📸","미션","주변에서 재미있는 모양 하나 찾아보기"],
+  ["🗣️","미션","친구에게 뜬금없는 질문 하나 보내보기"],
+  ["✏️","미션","왼손으로 내 이름 써보기"],
+  ["🔤","미션","오늘 본 간판이나 물건에서 특이한 단어 찾기"],
+  ["⏱️","미션","1분 동안 떠오르는 단어를 최대한 많이 적기"],
+  ["🎭","미션","표정 하나 정하고 10초 동안 유지해보기"],
+  ["🧠","미션","아무 단어나 골라 별명 3개 만들기"],
+  ["📦","미션","가까운 곳 한 군데만 깔끔하게 정리하기"],
+
+  ["💤","휴식","10분 동안 편하게 쉬기"],
+  ["🌿","휴식","창문 밖 풍경을 3분 동안 천천히 바라보기"],
+  ["🎧","휴식","좋아하는 음악 한 곡만 들으며 쉬기"],
+  ["☁️","휴식","누워서 오늘 좋았던 일 3개 생각하기"],
+  ["🫖","휴식","물이나 음료를 천천히 마시며 잠깐 쉬기"],
+  ["🌙","휴식","불을 조금 어둡게 하고 조용히 쉬기"],
+  ["📚","휴식","좋아하는 책이나 만화 몇 쪽 읽기"],
+  ["🪟","휴식","창밖의 움직이는 것 5개 찾아보기"],
+  ["😌","휴식","눈을 감고 1분 동안 주변 소리에 집중하기"],
+  ["🧸","휴식","편한 자세를 찾아 5분간 아무것도 하지 않기"],
+
+  ["🍀","운빨","행운의 숫자: "+(Math.floor(Math.random()*100)+1)],
+  ["🎲","운빨","오늘의 랜덤 미션 번호: "+(Math.floor(Math.random()*20)+1)],
+  ["🌟","운빨","오늘의 행운 키워드: " + ["구름","별","파랑","웃음","간식","우연"][Math.floor(Math.random()*6)]],
+  ["🪙","운빨","동전 앞면/뒷면 중 하나를 마음속으로 골라보기"],
+  ["🎁","운빨","집에서 가장 먼저 눈에 들어오는 물건을 오늘의 행운템으로 정하기"],
+  ["🔮","운빨","1~6 중 하나를 골라 오늘의 작은 목표 정하기"],
+  ["🌈","운빨","오늘 가장 자주 보게 될 색을 미리 예측해보기"],
+  ["✨","운빨","5분 안에 발견한 가장 신기한 것을 기록하기"]
+]
 const cats=["전체","음식","게임","영상","질문","창작","퀴즈","미션","휴식","운빨"];
 const catIcons={전체:"✦",음식:"⌂",게임:"▣",영상:"▶",질문:"?",창작:"◇",퀴즈:"✓",미션:"◆",휴식:"○",운빨:"+"};
 let cat="전체",last="";
@@ -129,13 +235,42 @@ cats.forEach(c=>{const b=document.createElement("button");b.textContent=c;b.data
 function renderCats(){[...catsEl.children].forEach((b,i)=>b.classList.toggle("on",cats[i]===cat))} renderCats();
 function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[m]))}
 function showAI(x){last=x.description||x.title||"";let choices=x.choices?.length?`<div class="choices">${x.choices.map((c,i)=>`<div class="choice"><b>${String.fromCharCode(65+i)}.</b> ${esc(c)}</div>`).join("")}</div>`:"";result.innerHTML=`<div class="emoji">🤖</div><div class="title">${esc(x.title||"AI 결과")}</div><div class="desc">${esc(x.description||"")}</div>${choices}${x.explanation?`<div class="desc"><b>해설:</b> ${esc(x.explanation)}</div>`:""}`;save.style.display="block";save.textContent="♡ 저장"}
-function draw(){let a=cat==="전체"?data:data.filter(x=>x[1]===cat);let x=a[Math.floor(Math.random()*a.length)];last=x[2];result.innerHTML=`<div class="emoji">${x[0]}</div><div class="title">${esc(x[2])}</div><div class="desc">랜덤으로 뽑힌 결과예요!</div>`;save.style.display="block";save.textContent="♡ 저장"}
+let recentRandom=[];
+function draw(){
+  const a=cat==="전체"?data:data.filter(x=>x[1]===cat);
+  let candidates=a.filter(x=>!recentRandom.includes(x[2]));
+  if(!candidates.length){recentRandom=[];candidates=a}
+  const x=candidates[Math.floor(Math.random()*candidates.length)];
+  recentRandom.push(x[2]);
+  if(recentRandom.length>Math.min(12,a.length-1)) recentRandom.shift();
+  last=x[2];
+  result.innerHTML=`<div class="emoji">${x[0]}</div><div class="title">${esc(x[2])}</div><div class="desc">랜덤으로 뽑힌 결과예요!</div>`;
+  save.style.display="block";
+  save.textContent="♡ 저장";
+}
 draw();save.style.display="none";
 document.getElementById("draw").onclick=draw;
 document.getElementById("quickDraw").onclick=()=>{randomMode.click();draw();document.getElementById("result").scrollIntoView({behavior:"smooth",block:"center"})};
 randomMode.onclick=()=>{randomMode.classList.add("on");aiMode.classList.remove("on");ai.classList.remove("show");document.getElementById("random").style.display="block"};
 aiMode.onclick=()=>{aiMode.classList.add("on");randomMode.classList.remove("on");document.getElementById("random").style.display="block";ai.classList.add("show");ai.scrollIntoView({behavior:"smooth",block:"center"})};
-generate.onclick=async()=>{loading.classList.add("show");save.style.display="none";try{const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.value,request:request.value,condition:condition.value,difficulty:difficulty.value,count:1})});const j=await r.json();if(!r.ok)throw Error(j.error||"생성 실패");showAI(j.items[0])}catch(e){result.innerHTML=`<div class="emoji">⚠️</div><div class="title">AI 생성 실패</div><div class="desc">${esc(e.message)}</div>`}finally{loading.classList.remove("show")}};
+const quotaCard=document.getElementById("quotaCard"),quotaModel=document.getElementById("quotaModel"),quotaStatus=document.getElementById("quotaStatus"),quotaBarFill=document.getElementById("quotaBarFill"),quotaDaily=document.getElementById("quotaDaily"),quotaRemaining=document.getElementById("quotaRemaining"),quotaMeta=document.getElementById("quotaMeta");
+function formatCountdown(total){const s=Math.max(0,Number(total)||0),h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=s%60;const parts=[];if(h)parts.push(`${h}시간`);if(m)parts.push(`${m}분`);if(sec||!parts.length)parts.push(`${sec}초`);return parts.join(" ")}
+function renderQuota(q){
+  if(!q)return;
+  const limit=Number(q.dailyLimit)||0, used=Number(q.requestsToday)||0, remaining=Number(q.remainingRequests)||0;
+  const percent=limit>0?Math.min(100,(used/limit)*100):0;
+  quotaModel.textContent=`${q.model||"Gemini"} · 최근 1분 ${q.rpmUsed||0}/${q.rpmLimit||"-"}`;
+  quotaDaily.textContent=limit>0?`오늘 ${used} / ${limit}회`:`오늘 ${used}회`;
+  quotaRemaining.textContent=limit>0?`남은 요청 약 ${remaining}회`:`표시 한도 미설정`;
+  quotaBarFill.style.width=`${percent}%`;
+  quotaStatus.textContent=limit>0?(percent>=90?"한도 임박":percent>=70?"주의":"정상"):"사용량 기록 중";
+  quotaStatus.className=`quota-status ${percent>=90?"danger":percent>=70?"warn":"ok"}`;
+  quotaMeta.textContent=`서버 기록 기준 · 다음 일일 초기화: ${q.resetAt||"확인 중"} · ${q.source||"실제 활성 한도는 AI Studio에서 확인"}`;
+}
+async function refreshQuota(){try{const r=await fetch("/api/quota",{cache:"no-store"});const q=await r.json();renderQuota(q)}catch{quotaStatus.textContent="확인 실패";quotaStatus.className="quota-status warn"}}
+refreshQuota();
+setInterval(refreshQuota,15000);
+generate.onclick=async()=>{loading.classList.add("show");save.style.display="none";try{const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.value,request:request.value,condition:condition.value,difficulty:difficulty.value,count:1})});const j=await r.json();if(j.quota)renderQuota(j.quota);if(!r.ok)throw Error(j.error||"생성 실패");showAI(j.items[0])}catch(e){result.innerHTML=`<div class="emoji">⚠️</div><div class="title">AI 생성 실패</div><div class="desc">${esc(e.message)}</div>`;refreshQuota()}finally{loading.classList.remove("show")}};
 save.onclick=()=>{if(!last)return;let a=JSON.parse(localStorage.getItem("pickerCustomV3Gemini")||"[]");if(!a.includes(last))a.push(last);localStorage.setItem("pickerCustomV3Gemini",JSON.stringify(a));save.textContent="✓ 저장됨";renderFavorites()};
 
 const overlay=document.getElementById("overlay"),sideMenu=document.getElementById("sideMenu"),menuBtn=document.getElementById("menuBtn"),menuClose=document.getElementById("menuClose");
