@@ -291,8 +291,9 @@ story:
       config: {
         responseMimeType: "application/json",
         temperature: 1.0,
-        // 짧고 가벼운 콘텐츠라 굳이 내부 사고(thinking) 단계가 필요 없음 → 꺼서 속도 개선
-        thinkingConfig: { thinkingBudget: 0 },
+        // Gemini 3.x부터는 thinkingBudget(숫자) 대신 thinkingLevel(문자) 사용.
+        // 짧고 가벼운 콘텐츠라 minimal로 설정해 속도를 최대한 확보함
+        thinkingConfig: { thinkingLevel: "minimal" },
         // 응답 길이를 필요한 만큼만 제한해 생성이 일찍 끝나도록 함
         maxOutputTokens: 1024
       }
