@@ -273,7 +273,11 @@ story:
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        temperature: 1.0
+        temperature: 1.0,
+        // 짧고 가벼운 콘텐츠라 굳이 내부 사고(thinking) 단계가 필요 없음 → 꺼서 속도 개선
+        thinkingConfig: { thinkingBudget: 0 },
+        // 응답 길이를 필요한 만큼만 제한해 생성이 일찍 끝나도록 함
+        maxOutputTokens: 1024
       }
     });
 

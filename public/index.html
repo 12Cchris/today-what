@@ -375,7 +375,28 @@ function renderQuota(q){
 async function refreshQuota(){try{const r=await fetch("/api/quota",{cache:"no-store"});const q=await r.json();renderQuota(q)}catch{quotaStatus.textContent="확인 실패";quotaStatus.className="quota-status warn"}}
 refreshQuota();
 setInterval(refreshQuota,15000);
-generate.onclick=async()=>{loading.classList.add("show");save.style.display="none";try{const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.value,request:request.value,condition:condition.value,difficulty:difficulty.value,count:1})});const j=await r.json();if(j.quota)renderQuota(j.quota);if(!r.ok)throw Error(j.error||"생성 실패");showAI(j.items[0])}catch(e){result.innerHTML=`<div class="emoji">⚠️</div><div class="title">AI 생성 실패</div><div class="desc">${esc(e.message)}</div>`;refreshQuota()}finally{loading.classList.remove("show")}};
+generate.onclick=async()=>{
+  if(generate.disabled)return;
+  generate.disabled=true;
+  loading.classList.add("show");save.style.display="none";
+  const controller=new AbortController();
+  const timeoutId=setTimeout(()=>controller.abort(),30000);
+  try{
+    const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.value,request:request.value,condition:condition.value,difficulty:difficulty.value,count:1}),signal:controller.signal});
+    const j=await r.json();
+    if(j.quota)renderQuota(j.quota);
+    if(!r.ok)throw Error(j.error||"생성 실패");
+    showAI(j.items[0])
+  }catch(e){
+    const msg=e.name==="AbortError"?"응답이 너무 오래 걸려 요청을 중단했어요. 네트워크 상태를 확인하고 다시 시도해주세요.":e.message;
+    result.innerHTML=`<div class="emoji">⚠️</div><div class="title">AI 생성 실패</div><div class="desc">${esc(msg)}</div>`;
+    refreshQuota()
+  }finally{
+    clearTimeout(timeoutId);
+    loading.classList.remove("show");
+    generate.disabled=false;
+  }
+};
 save.onclick=()=>{if(!last)return;let a=JSON.parse(localStorage.getItem("pickerCustomV3Gemini")||"[]");if(!a.includes(last))a.push(last);localStorage.setItem("pickerCustomV3Gemini",JSON.stringify(a));save.textContent="✓ 저장됨";renderFavorites()};
 
 const overlay=document.getElementById("overlay"),sideMenu=document.getElementById("sideMenu"),menuBtn=document.getElementById("menuBtn"),menuClose=document.getElementById("menuClose");
