@@ -21,21 +21,31 @@ const DISPLAY_RPM_LIMIT = Number(process.env.GEMINI_RPM_LIMIT || 20);
 
 // --- 사용량 영구 저장 (서버 재시작/재배포에도 유지) ---
 // Render 무료 플랜은 재배포/재시작 시 메모리와 디스크가 초기화되므로,
-// 요청 횟수는 counterapi.dev(가입 불필요, 무료 공개 카운터 서비스)에 저장해
+// 요청 횟수는 counterapi.dev(무료 가입 필요, V2 API)에 저장해
 // 서버가 다시 켜져도 오늘 몇 번 썼는지 이어서 확인할 수 있게 합니다.
-// 이 서비스가 응답하지 않아도 앱은 기존처럼 메모리 카운트로 정상 동작합니다.
-const USAGE_COUNTER_WORKSPACE = process.env.USAGE_COUNTER_WORKSPACE || "today-what-12cchris";
-const USAGE_COUNTER_BASE = "https://api.counterapi.dev/v1";
+// (V1은 인증 없이 쓸 수 있었지만 폐지되어 V2로 전환. V2는 계정+API 토큰 필요)
+// 이 서비스가 응답하지 않거나 토큰이 없어도 앱은 기존처럼 메모리 카운트로 정상 동작합니다.
+const USAGE_COUNTER_WORKSPACE = process.env.USAGE_COUNTER_WORKSPACE || "";
+const COUNTER_API_TOKEN = process.env.COUNTER_API_TOKEN || "";
+const USAGE_COUNTER_BASE = "https://api.counterapi.dev/v2";
 
 function usageCounterName(dayKey) {
   return `requests-${dayKey}`;
 }
 
+function counterConfigured() {
+  return Boolean(USAGE_COUNTER_WORKSPACE && COUNTER_API_TOKEN);
+}
+
 async function fetchWithTimeout(url, ms = 3000) {
+  if (!counterConfigured()) return null;
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
-    const res = await fetch(url, { signal: controller.signal });
+    const res = await fetch(url, {
+      signal: controller.signal,
+      headers: { Authorization: `Bearer ${COUNTER_API_TOKEN}` }
+    });
     if (!res.ok) return null;
     return await res.json();
   } catch {
@@ -47,7 +57,8 @@ async function fetchWithTimeout(url, ms = 3000) {
 
 function extractCount(json) {
   if (!json) return null;
-  const value = json.count ?? json.up_count ?? json.value;
+  const data = json.data || json;
+  const value = data.up_count ?? data.count ?? data.value;
   return typeof value === "number" ? value : null;
 }
 
