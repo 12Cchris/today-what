@@ -385,7 +385,7 @@ generate.onclick=async()=>{
     const r=await fetch("/api/generate",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({type:type.value,request:request.value,condition:condition.value,difficulty:difficulty.value,count:1}),signal:controller.signal});
     const j=await r.json();
     if(j.quota)renderQuota(j.quota);
-    if(!r.ok)throw Error(j.error||"생성 실패");
+    if(!r.ok)throw Error((j.error||"생성 실패")+(j.debug?`\n(디버그: ${j.debug})`:""));
     showAI(j.items[0])
   }catch(e){
     const msg=e.name==="AbortError"?"응답이 너무 오래 걸려 요청을 중단했어요. 네트워크 상태를 확인하고 다시 시도해주세요.":e.message;

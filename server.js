@@ -382,6 +382,7 @@ story:
 
     res.status(500).json({
       error: "Gemini 생성에 실패했습니다. API 키와 서버 상태를 확인해주세요.",
+      debug: errorMsg.slice(0, 500),
       quota: getQuotaSnapshot()
     });
   }
