@@ -37,8 +37,13 @@ function counterConfigured() {
   return Boolean(USAGE_COUNTER_WORKSPACE && COUNTER_API_TOKEN);
 }
 
-async function fetchWithTimeout(url, ms = 3000) {
-  if (!counterConfigured()) return null;
+let lastCounterDebug = null;
+
+async function fetchWithTimeout(url, ms = 5000) {
+  if (!counterConfigured()) {
+    lastCounterDebug = { url, note: "USAGE_COUNTER_WORKSPACE 또는 COUNTER_API_TOKEN이 비어있음" };
+    return null;
+  }
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), ms);
   try {
@@ -46,9 +51,17 @@ async function fetchWithTimeout(url, ms = 3000) {
       signal: controller.signal,
       headers: { Authorization: `Bearer ${COUNTER_API_TOKEN}` }
     });
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
+    const bodyText = await res.text();
+    if (!res.ok) {
+      lastCounterDebug = { url, status: res.status, body: bodyText.slice(0, 300) };
+      console.error(`[counterapi] 실패 status=${res.status} url=${url} body=${bodyText.slice(0, 300)}`);
+      return null;
+    }
+    lastCounterDebug = { url, status: res.status, body: bodyText.slice(0, 300) };
+    return JSON.parse(bodyText);
+  } catch (err) {
+    lastCounterDebug = { url, error: err?.message || String(err) };
+    console.error(`[counterapi] 예외 url=${url} error=${err?.message || err}`);
     return null;
   } finally {
     clearTimeout(timer);
@@ -175,7 +188,9 @@ function getQuotaSnapshot() {
     resetInSeconds: remainingSeconds,
     source: usage.detectedLimit
       ? "Gemini 오류 응답에서 확인된 한도"
-      : "Render 표시 설정값"
+      : "Render 표시 설정값",
+    counterConfigured: counterConfigured(),
+    counterDebug: lastCounterDebug
   };
 }
 
