@@ -19,6 +19,55 @@ const ai = new GoogleGenAI({
 const DISPLAY_DAILY_LIMIT = Number(process.env.GEMINI_RPD_LIMIT || 20);
 const DISPLAY_RPM_LIMIT = Number(process.env.GEMINI_RPM_LIMIT || 20);
 
+// --- 사용량 영구 저장 (서버 재시작/재배포에도 유지) ---
+// Render 무료 플랜은 재배포/재시작 시 메모리와 디스크가 초기화되므로,
+// 요청 횟수는 counterapi.dev(가입 불필요, 무료 공개 카운터 서비스)에 저장해
+// 서버가 다시 켜져도 오늘 몇 번 썼는지 이어서 확인할 수 있게 합니다.
+// 이 서비스가 응답하지 않아도 앱은 기존처럼 메모리 카운트로 정상 동작합니다.
+const USAGE_COUNTER_WORKSPACE = process.env.USAGE_COUNTER_WORKSPACE || "today-what-12cchris";
+const USAGE_COUNTER_BASE = "https://api.counterapi.dev/v1";
+
+function usageCounterName(dayKey) {
+  return `requests-${dayKey}`;
+}
+
+async function fetchWithTimeout(url, ms = 3000) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), ms);
+  try {
+    const res = await fetch(url, { signal: controller.signal });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function extractCount(json) {
+  if (!json) return null;
+  const value = json.count ?? json.up_count ?? json.value;
+  return typeof value === "number" ? value : null;
+}
+
+// 실제 요청 없이 현재까지 쌓인 외부 카운트만 조회해 화면 표시값을 맞춥니다.
+async function syncUsageFromCounter() {
+  resetUsageIfNeeded();
+  const url = `${USAGE_COUNTER_BASE}/${USAGE_COUNTER_WORKSPACE}/${usageCounterName(usage.dayKey)}`;
+  const json = await fetchWithTimeout(url);
+  const count = extractCount(json);
+  if (count !== null) {
+    usage.requests = count;
+  }
+}
+
+// 실제 생성 요청이 있을 때 외부 카운터도 함께 올립니다(실패해도 무시).
+function bumpExternalCounter(dayKey) {
+  const url = `${USAGE_COUNTER_BASE}/${USAGE_COUNTER_WORKSPACE}/${usageCounterName(dayKey)}/up`;
+  fetchWithTimeout(url).catch(() => {});
+}
+
 let usage = {
   dayKey: getPacificDayKey(),
   requests: 0,
@@ -68,6 +117,7 @@ function recordRequest() {
   usage.requests += 1;
   usage.timestamps.push(now);
   usage.timestamps = usage.timestamps.filter((t) => now - t < 60_000);
+  bumpExternalCounter(usage.dayKey);
 }
 
 function getNextPacificMidnight(date = new Date()) {
@@ -161,7 +211,8 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const allowedTypes = new Set(["recommendation", "quiz", "question", "story"]);
 
-app.get("/api/quota", (_req, res) => {
+app.get("/api/quota", async (_req, res) => {
+  await syncUsageFromCounter();
   res.json(getQuotaSnapshot());
 });
 
