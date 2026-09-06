@@ -37,11 +37,11 @@ function counterConfigured() {
   return Boolean(USAGE_COUNTER_WORKSPACE && COUNTER_API_TOKEN);
 }
 
-let lastCounterDebug = null;
+let lastCounterDebug = { get: null, up: null };
 
-async function fetchWithTimeout(url, ms = 5000) {
+async function fetchWithTimeout(url, ms = 5000, kind = "get") {
   if (!counterConfigured()) {
-    lastCounterDebug = { url, note: "USAGE_COUNTER_WORKSPACE 또는 COUNTER_API_TOKEN이 비어있음" };
+    lastCounterDebug[kind] = { url, note: "USAGE_COUNTER_WORKSPACE 또는 COUNTER_API_TOKEN이 비어있음" };
     return null;
   }
   const controller = new AbortController();
@@ -52,16 +52,15 @@ async function fetchWithTimeout(url, ms = 5000) {
       headers: { Authorization: `Bearer ${COUNTER_API_TOKEN}` }
     });
     const bodyText = await res.text();
+    lastCounterDebug[kind] = { url, status: res.status, body: bodyText.slice(0, 300) };
     if (!res.ok) {
-      lastCounterDebug = { url, status: res.status, body: bodyText.slice(0, 300) };
-      console.error(`[counterapi] 실패 status=${res.status} url=${url} body=${bodyText.slice(0, 300)}`);
+      console.error(`[counterapi:${kind}] 실패 status=${res.status} url=${url} body=${bodyText.slice(0, 300)}`);
       return null;
     }
-    lastCounterDebug = { url, status: res.status, body: bodyText.slice(0, 300) };
     return JSON.parse(bodyText);
   } catch (err) {
-    lastCounterDebug = { url, error: err?.message || String(err) };
-    console.error(`[counterapi] 예외 url=${url} error=${err?.message || err}`);
+    lastCounterDebug[kind] = { url, error: err?.message || String(err) };
+    console.error(`[counterapi:${kind}] 예외 url=${url} error=${err?.message || err}`);
     return null;
   } finally {
     clearTimeout(timer);
@@ -79,7 +78,7 @@ function extractCount(json) {
 async function syncUsageFromCounter() {
   resetUsageIfNeeded();
   const url = `${USAGE_COUNTER_BASE}/${USAGE_COUNTER_WORKSPACE}/${usageCounterName(usage.dayKey)}`;
-  const json = await fetchWithTimeout(url);
+  const json = await fetchWithTimeout(url, 5000, "get");
   const count = extractCount(json);
   if (count !== null) {
     usage.requests = count;
@@ -89,7 +88,7 @@ async function syncUsageFromCounter() {
 // 실제 생성 요청이 있을 때 외부 카운터도 함께 올립니다(실패해도 무시).
 function bumpExternalCounter(dayKey) {
   const url = `${USAGE_COUNTER_BASE}/${USAGE_COUNTER_WORKSPACE}/${usageCounterName(dayKey)}/up`;
-  fetchWithTimeout(url).catch(() => {});
+  fetchWithTimeout(url, 5000, "up").catch(() => {});
 }
 
 let usage = {
